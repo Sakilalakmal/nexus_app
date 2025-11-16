@@ -24,14 +24,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { PlusCircleIcon } from "lucide-react";
+import { Loader2Icon, PlusCircleIcon, School2Icon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { workspaceSchema } from "@/app/schemas/workspace";
+import { workspaceSchema, WorkspaceSchemaType } from "@/app/schemas/workspace";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
+import { toast } from "sonner";
 
 export function CreateWorkspace() {
   const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   //define form
   const form = useForm({
@@ -41,8 +45,30 @@ export function CreateWorkspace() {
     },
   });
 
+  //connect with create workspace
+  const createWorkspaceMutation = useMutation(
+    orpc.workspace.create.mutationOptions({
+      onSuccess: (newWorksSpace) => {
+        toast.success(
+          `workspace ${newWorksSpace.workspaceName} created successfully.`
+        );
+
+        queryClient.invalidateQueries({
+          queryKey: orpc.workspace.list.queryKey(),
+        });
+        setOpen(false);
+        form.reset();
+      },
+      onError: () => {
+        toast.error("Failed to create workspace.");
+      },
+    })
+  );
+
   //define submit handler
-  function onSubmit() {}
+  function onSubmit(values: WorkspaceSchemaType) {
+    createWorkspaceMutation.mutate(values);
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -88,7 +114,19 @@ export function CreateWorkspace() {
                 </FormItem>
               )}
             />
-            <Button>Create Workspace</Button>
+            <Button disabled={createWorkspaceMutation.isPending}>
+              {createWorkspaceMutation.isPending ? (
+                <>
+                  <Loader2Icon className="size-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <School2Icon className="size-4" />
+                  Create Workspace
+                </>
+              )}
+            </Button>
           </form>
         </Form>
       </DialogContent>
