@@ -1,3 +1,5 @@
+"use client";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,19 +11,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getAvatar } from "@/lib/getAwatar";
+import { orpc } from "@/lib/orpc";
 import {
   LogoutLink,
   PortalLink,
 } from "@kinde-oss/kinde-auth-nextjs/components";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { CreditCardIcon, LogOutIcon, User } from "lucide-react";
 
-const user = {
-  picture: "https://github.com/shadcn.png",
-  given_name: "lakmal",
-  email: "lakmal@example.com",
-};
-
 export function UserNavigation() {
+  const {
+    data: { user },
+  } = useSuspenseQuery(orpc.workspace.list.queryOptions());
+
+  console.log(user.picture);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -31,7 +36,10 @@ export function UserNavigation() {
           className="size-12 rounded-xl hover:rounded-lg transition-all duration-200 bg-background/50 border-border/50 hover:bg-accent hover:text-accent-foreground"
         >
           <Avatar>
-            <AvatarImage src={user.picture} className="object-cover" />
+            <AvatarImage
+              src={getAvatar(user.picture, user.email!)}
+              className="object-cover"
+            />
             <AvatarFallback>
               {user.given_name?.slice(0, 1).toUpperCase()}
             </AvatarFallback>
@@ -47,7 +55,10 @@ export function UserNavigation() {
         {/* Dropdown menu items go here */}
         <DropdownMenuLabel className="font-normal flex items-center gap-2 p-1.5 text-left text-sm">
           <Avatar className="relative rounded-lg size-8">
-            <AvatarImage src={user.picture} className="object-cover" />
+            <AvatarImage
+              src={getAvatar(user.picture, user.email!)}
+              className="object-cover"
+            />
             <AvatarFallback>
               {user.given_name?.slice(0, 1).toUpperCase()}
             </AvatarFallback>
