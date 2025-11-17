@@ -16,7 +16,7 @@ export const base = os.$context<{ request: Request }>().errors({
   INTERNAL_SERVER_ERROR: {
     message: "An unexpected error occurred on the server.",
   },
-  FORBIDDEN:{
+  FORBIDDEN: {
     message: "You do not have permission to access this resource.",
-  }
+  },
 });

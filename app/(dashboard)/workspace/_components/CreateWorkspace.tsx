@@ -34,7 +34,6 @@ import { orpc } from "@/lib/orpc";
 import { toast } from "sonner";
 import { isDefinedError } from "@orpc/client";
 
-
 export function CreateWorkspace() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
