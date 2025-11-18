@@ -13,6 +13,7 @@ import {
   Organizations,
 } from "@kinde/management-api-js";
 import { KindeOrganization } from "@kinde-oss/kinde-auth-nextjs";
+import { Channel } from "@/lib/generated/prisma/client";
 
 export const createChannel = base
   .use(requiredAuthMiddleware)
@@ -28,7 +29,7 @@ export const createChannel = base
     tags: ["Channel"],
   })
   .input(channelNameSchema)
-  .output(z.custom<ChannelNameSchemaType>())
+  .output(z.custom<Channel>())
   .handler(async ({ input, context }) => {
     const channel = await prisma.channel.create({
       data: {
@@ -55,7 +56,7 @@ export const listChannels = base
   .input(z.void())
   .output(
     z.object({
-      channels: z.array(z.custom<ChannelNameSchemaType>()),
+      channels: z.array(z.custom<Channel>()),
       currentWorkspace: z.custom<KindeOrganization<unknown>>(),
       members: z.array(z.custom<organization_user>()),
     })

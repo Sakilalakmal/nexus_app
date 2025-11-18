@@ -1,9 +1,8 @@
-import React from "react";
+import { client } from "@/lib/orpc";
+import { redirect } from "next/navigation";
 
-const workspacePage = () => {
-  return <div>
-
-  </div>;
+const workspacePage = async () => {
+  return <div></div>;
 };
 
 export default workspacePage;
