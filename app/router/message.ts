@@ -9,6 +9,7 @@ import { messageSchema } from "../schemas/messages";
 import { getAvatar } from "@/lib/getAwatar";
 import { Message } from "@/lib/generated/prisma/client";
 import { readSecurityMiddleware } from "../middlewares/read";
+import next from "next";
 
 export const createMessage = base
   .use(requiredAuthMiddleware)
@@ -72,9 +73,16 @@ export const listMessages = base
   .input(
     z.object({
       channelId: z.string(),
+      limit: z.number().min(1).max(100).optional(),
+      cursor: z.string().optional(),
     })
   )
-  .output(z.custom<Message[]>())
+  .output(
+    z.object({
+      items: z.custom<Message[]>(),
+      nextCursor: z.string().optional(),
+    })
+  )
   .handler(async ({ input, context, errors }) => {
     const channel = await prisma.channel.findFirst({
       where: {
@@ -87,14 +95,22 @@ export const listMessages = base
       throw errors.FORBIDDEN();
     }
 
-    const data = await prisma.message.findMany({
+    const limit = input.limit ?? 30;
+
+    const messages = await prisma.message.findMany({
       where: {
         channelId: input.channelId,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+      take: limit,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
 
-    return data;
+    const nextCursor =
+      messages.length === limit ? messages[messages.length - 1].id : undefined;
+
+    return {
+      items: messages,
+      nextCursor: nextCursor,
+    };
   });
