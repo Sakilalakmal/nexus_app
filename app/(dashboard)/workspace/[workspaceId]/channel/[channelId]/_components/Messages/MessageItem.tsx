@@ -2,13 +2,37 @@ import { MessageSchemaType } from "@/app/schemas/messages";
 import { SafeContent } from "@/components/rich-text-editor/SafeContent";
 import { Message } from "@/lib/generated/prisma/client";
 import { getAvatar } from "@/lib/getAwatar";
+import { ImageLoadingCoordinatorType } from "@/hooks/use-image-loading-coordinator";
 import Image from "next/image";
+import { useState } from "react";
 
 interface messagesProps {
   message: Message;
+  imageLoadingCoordinator?: ImageLoadingCoordinatorType;
 }
 
-export function MessageItem({ message }: messagesProps) {
+export function MessageItem({ message, imageLoadingCoordinator }: messagesProps) {
+  const [imageLoading, setImageLoading] = useState(!!message.imageUrl);
+  const [imageError, setImageError] = useState(false);
+
+  const handleImageLoadStart = () => {
+    if (message.imageUrl) {
+      setImageLoading(true);
+      imageLoadingCoordinator?.registerImageStart(message.id);
+    }
+  };
+
+  const handleImageLoad = () => {
+    setImageLoading(false);
+    imageLoadingCoordinator?.registerImageComplete(message.id);
+  };
+
+  const handleImageError = () => {
+    setImageLoading(false);
+    setImageError(true);
+    imageLoadingCoordinator?.registerImageError(message.id);
+  };
+
   return (
     <div className="relative flex space-x-3 rounded-lg p-4 group hover:bg-muted/50">
       <Image
@@ -43,13 +67,30 @@ export function MessageItem({ message }: messagesProps) {
 
         {message.imageUrl && (
           <div className="mt-4">
-            <Image
-              src={message.imageUrl}
-              alt="message image"
-              width={512}
-              height={512}
-              className="rounded-md  max-h-[300px] w-auto object-contain"
-            />
+            {imageLoading && (
+              <div className="rounded-md bg-muted animate-pulse max-h-[300px] w-64 h-48 flex items-center justify-center">
+                <div className="text-muted-foreground text-sm">Loading image...</div>
+              </div>
+            )}
+            {imageError ? (
+              <div className="rounded-md bg-destructive/10 border border-destructive/20 max-h-[300px] w-64 h-48 flex items-center justify-center">
+                <div className="text-destructive text-sm">Failed to load image</div>
+              </div>
+            ) : (
+              <Image
+                src={message.imageUrl}
+                alt="message image"
+                width={512}
+                height={512}
+                className={`rounded-md max-h-[300px] w-auto object-contain transition-opacity duration-200 ${
+                  imageLoading ? 'opacity-0 absolute' : 'opacity-100'
+                }`}
+                onLoadingComplete={handleImageLoad}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                onLoadStart={handleImageLoadStart}
+              />
+            )}
           </div>
         )}
       </div>
