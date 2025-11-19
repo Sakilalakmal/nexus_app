@@ -14,20 +14,20 @@ export function useImageLoadingCoordinator() {
   });
 
   const registerImageStart = useCallback((messageId: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       loadingImages: new Set([...prev.loadingImages, messageId]),
       pendingImages: new Set([...prev.pendingImages, messageId]),
     }));
   }, []);
 
   const registerImageComplete = useCallback((messageId: string) => {
-    setState(prev => {
+    setState((prev) => {
       const newLoadingImages = new Set(prev.loadingImages);
       const newPendingImages = new Set(prev.pendingImages);
-      
+
       newLoadingImages.delete(messageId);
       newPendingImages.delete(messageId);
-      
+
       return {
         loadingImages: newLoadingImages,
         pendingImages: newPendingImages,
@@ -36,13 +36,13 @@ export function useImageLoadingCoordinator() {
   }, []);
 
   const registerImageError = useCallback((messageId: string) => {
-    setState(prev => {
+    setState((prev) => {
       const newLoadingImages = new Set(prev.loadingImages);
       const newPendingImages = new Set(prev.pendingImages);
-      
+
       newLoadingImages.delete(messageId);
       newPendingImages.delete(messageId);
-      
+
       return {
         loadingImages: newLoadingImages,
         pendingImages: newPendingImages,
@@ -57,13 +57,17 @@ export function useImageLoadingCoordinator() {
     });
   }, []);
 
-  const isAnyImageLoading = useMemo(() => 
-    state.loadingImages.size > 0
-  , [state.loadingImages.size]);
+  const isAnyImageLoading = useMemo(
+    () => state.loadingImages.size > 0,
+    [state.loadingImages.size]
+  );
 
-  const hasLoadingImages = useCallback((messageIds: string[]) => {
-    return messageIds.some(id => state.loadingImages.has(id));
-  }, [state.loadingImages]);
+  const hasLoadingImages = useCallback(
+    (messageIds: string[]) => {
+      return messageIds.some((id) => state.loadingImages.has(id));
+    },
+    [state.loadingImages]
+  );
 
   return {
     isAnyImageLoading,
@@ -77,4 +81,6 @@ export function useImageLoadingCoordinator() {
   };
 }
 
-export type ImageLoadingCoordinatorType = ReturnType<typeof useImageLoadingCoordinator>;
+export type ImageLoadingCoordinatorType = ReturnType<
+  typeof useImageLoadingCoordinator
+>;

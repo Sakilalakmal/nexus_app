@@ -1,11 +1,10 @@
 "use client";
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { MessageItem } from "./Messages/MessageItem";
 import { orpc } from "@/lib/orpc";
 import { useParams } from "next/navigation";
-import { use, useEffect, useMemo, useRef, useState } from "react";
-import { set } from "zod";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useImageLoadingCoordinator } from "@/hooks/use-image-loading-coordinator";
 
 export function MessagesList() {
@@ -44,10 +43,7 @@ export function MessagesList() {
     data,
     fetchNextPage,
     hasNextPage,
-    isFetchingNextPage,
-    isLoading,
     isFetching,
-    error,
   } = useInfiniteQuery({
     ...infiniteOptions,
     staleTime: 30_000,
@@ -60,8 +56,11 @@ export function MessagesList() {
 
       if (el) {
         el.scrollTop = el.scrollHeight;
-        setHasInitialScroll(true);
-        setIsBottom(true);
+        // Defer state updates to avoid cascading renders
+        setTimeout(() => {
+          setHasInitialScroll(true);
+          setIsBottom(true);
+        }, 0);
       }
     }
   }, [data?.pages.length, hasInitialScroll]);
@@ -119,30 +118,33 @@ export function MessagesList() {
 
     // Check if we have new messages
     if (lastIteIdRef.current && latestMessageId !== lastIteIdRef.current) {
-      setNewMessages(true);
+      // Defer state updates to avoid cascading renders
+      setTimeout(() => {
+        setNewMessages(true);
 
-      // Auto-scroll only if user was at bottom
-      if (isAtBottom) {
-        // Check if the new messages have images that are still loading
-        const recentMessages = currentItems.slice(-5); // Check last 5 messages
-        const recentMessageIds = recentMessages.map((m) => m.id);
-        const hasLoadingImages =
-          imageLoadingCoordinator.hasLoadingImages(recentMessageIds);
+        // Auto-scroll only if user was at bottom
+        if (isAtBottom) {
+          // Check if the new messages have images that are still loading
+          const recentMessages = currentItems.slice(-5); // Check last 5 messages
+          const recentMessageIds = recentMessages.map((m) => m.id);
+          const hasLoadingImages =
+            imageLoadingCoordinator.hasLoadingImages(recentMessageIds);
 
-        if (hasLoadingImages) {
-          // Set pending scroll and wait for images
-          setPendingAutoScroll(true);
+          if (hasLoadingImages) {
+            // Set pending scroll and wait for images
+            setPendingAutoScroll(true);
 
-          // Fallback timeout - auto-scroll after 5 seconds even if images haven't loaded
-          if (scrollTimeoutRef.current) {
-            clearTimeout(scrollTimeoutRef.current);
+            // Fallback timeout - auto-scroll after 5 seconds even if images haven't loaded
+            if (scrollTimeoutRef.current) {
+              clearTimeout(scrollTimeoutRef.current);
+            }
+            scrollTimeoutRef.current = setTimeout(performAutoScroll, 5000);
+          } else {
+            // No images loading, scroll immediately
+            performAutoScroll();
           }
-          scrollTimeoutRef.current = setTimeout(performAutoScroll, 5000);
-        } else {
-          // No images loading, scroll immediately
-          performAutoScroll();
         }
-      }
+      }, 0);
     }
 
     lastIteIdRef.current = latestMessageId;

@@ -1,14 +1,10 @@
 import { z } from "zod";
-import InviteMember from "../(dashboard)/workspace/[workspaceId]/channel/[channelId]/_components/member/InviteMember";
 import { heavyWriteSecurityMiddleware } from "../middlewares/arcjet/heavy-weight";
 import { standardSecurityMiddleware } from "../middlewares/arcjet/standard";
 import { requiredAuthMiddleware } from "../middlewares/auth";
 import { base } from "../middlewares/base";
 import { requiredWorkspaceMiddleware } from "../middlewares/workspace";
-import {
-  inviteMemberSchema,
-  InviteMemberSchemaType,
-} from "@/app/schemas/Member";
+import { inviteMemberSchema } from "@/app/schemas/Member";
 import {
   init,
   organization_user,
@@ -53,6 +49,7 @@ export const inviteMember = base
         },
       });
     } catch (error) {
+      console.log(error);
       throw errors.INTERNAL_SERVER_ERROR();
     }
   });
