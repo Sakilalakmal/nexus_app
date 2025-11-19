@@ -6,6 +6,7 @@ import { orpc } from "@/lib/orpc";
 import { useParams } from "next/navigation";
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import { set } from "zod";
+import { useImageLoadingCoordinator } from "@/hooks/use-image-loading-coordinator";
 
 export function MessagesList() {
   const { channelId } = useParams<{ channelId: string }>();
@@ -17,8 +18,12 @@ export function MessagesList() {
   const [isAtBottom, setIsBottom] = useState(false);
 
   const [newMessages, setNewMessages] = useState(false);
+  const [pendingAutoScroll, setPendingAutoScroll] = useState(false);
 
   const lastIteIdRef = useRef<string | undefined>(undefined);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const imageLoadingCoordinator = useImageLoadingCoordinator();
 
   const infiniteOptions = orpc.message.list.infiniteOptions({
     input: (pageparam: string | undefined) => ({
@@ -26,6 +31,7 @@ export function MessagesList() {
       cursor: pageparam,
       limit: 30,
     }),
+    queryKey: ["messages-list", channelId],
     initialPageParam: undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     select: (data) => ({
@@ -69,6 +75,41 @@ export function MessagesList() {
     setIsBottom(isNearBottom);
   };
 
+  // Smart auto-scroll that waits for images to load
+  const performAutoScroll = useMemo(() => {
+    return () => {
+      bottomRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+      setNewMessages(false);
+      setPendingAutoScroll(false);
+    };
+  }, []);
+
+  // Handle pending auto-scroll when images finish loading
+  useEffect(() => {
+    if (pendingAutoScroll && !imageLoadingCoordinator.isAnyImageLoading) {
+      // Clear any existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // Small delay to ensure DOM has updated
+      scrollTimeoutRef.current = setTimeout(performAutoScroll, 100);
+    }
+
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [
+    pendingAutoScroll,
+    imageLoadingCoordinator.isAnyImageLoading,
+    performAutoScroll,
+  ]);
+
   // Detect new messages and handle auto-scroll
   useEffect(() => {
     if (!data?.pages.length) return;
@@ -82,16 +123,30 @@ export function MessagesList() {
 
       // Auto-scroll only if user was at bottom
       if (isAtBottom) {
-        bottomRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "end",
-        });
-        setNewMessages(false);
+        // Check if the new messages have images that are still loading
+        const recentMessages = currentItems.slice(-5); // Check last 5 messages
+        const recentMessageIds = recentMessages.map((m) => m.id);
+        const hasLoadingImages =
+          imageLoadingCoordinator.hasLoadingImages(recentMessageIds);
+
+        if (hasLoadingImages) {
+          // Set pending scroll and wait for images
+          setPendingAutoScroll(true);
+
+          // Fallback timeout - auto-scroll after 5 seconds even if images haven't loaded
+          if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
+          }
+          scrollTimeoutRef.current = setTimeout(performAutoScroll, 5000);
+        } else {
+          // No images loading, scroll immediately
+          performAutoScroll();
+        }
       }
     }
 
     lastIteIdRef.current = latestMessageId;
-  }, [data?.pages, isAtBottom]);
+  }, [data?.pages, isAtBottom, imageLoadingCoordinator, performAutoScroll]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -126,35 +181,50 @@ export function MessagesList() {
         onScroll={handleScroll}
       >
         {items.map((messag) => (
-          <MessageItem key={messag.id} message={messag} />
+          <MessageItem
+            key={messag.id}
+            message={messag}
+            imageLoadingCoordinator={imageLoadingCoordinator}
+          />
         ))}
         <div ref={bottomRef} className="h-1" />
       </div>
 
       {/* New messages indicator */}
-      {newMessages && !isAtBottom && (
+      {(newMessages || pendingAutoScroll) && !isAtBottom && (
         <button
-        type="button"
+          type="button"
           onClick={() => {
-            bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-            setNewMessages(false);
+            if (scrollTimeoutRef.current) {
+              clearTimeout(scrollTimeoutRef.current);
+            }
+            performAutoScroll();
           }}
           className="absolute bottom-4 right-4 bg-primary text-primary-foreground px-3 py-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors flex items-center gap-2 text-sm font-medium"
         >
-          New messages
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 14l-7 7m0 0l-7-7m7 7V3"
-            />
-          </svg>
+          {pendingAutoScroll ? (
+            <>
+              Loading images...
+              <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+            </>
+          ) : (
+            <>
+              New messages
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                />
+              </svg>
+            </>
+          )}
         </button>
       )}
     </div>
