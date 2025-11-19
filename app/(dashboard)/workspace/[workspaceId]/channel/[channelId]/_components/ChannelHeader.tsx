@@ -1,4 +1,6 @@
 import { ToggleTheme } from "@/components/ui/Theme-toggler";
+import InviteMember from "./member/InviteMember";
+import { MembersOverView } from "./member/MembersOverView";
 
 interface channelHeaderProps {
   channelName: string | undefined;
@@ -10,7 +12,10 @@ export function ChannelHeader({ channelName }: channelHeaderProps) {
       <h1 className="flex-1 text-lg font-semibold text-foreground">
         #{channelName}
       </h1>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        <MembersOverView />
+        <InviteMember />
+
         <ToggleTheme />
       </div>
     </header>
