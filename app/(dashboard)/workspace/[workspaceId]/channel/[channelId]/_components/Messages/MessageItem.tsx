@@ -40,6 +40,18 @@ export function MessageItem({ message }: messagesProps) {
           content={JSON.parse(message.content)}
           className="text-sm wrap-break-word prose dark:prose-invert max-w-none marker:text-primary"
         />
+
+        {message.imageUrl && (
+          <div className="mt-4">
+            <Image
+              src={message.imageUrl}
+              alt="message image"
+              width={512}
+              height={512}
+              className="rounded-md  max-h-[300px] w-auto object-contain"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
