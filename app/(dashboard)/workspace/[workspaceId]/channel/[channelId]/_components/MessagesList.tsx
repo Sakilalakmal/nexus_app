@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { MessageItem } from "./Messages/MessageItem";
 import { orpc } from "@/lib/orpc";
 import { useParams } from "next/navigation";
@@ -39,16 +39,15 @@ export function MessagesList() {
     }),
   });
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-  } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetching } = useInfiniteQuery({
     ...infiniteOptions,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
+
+  const {
+    data: { user },
+  } = useSuspenseQuery(orpc.workspace.list.queryOptions());
 
   useEffect(() => {
     if (!hasInitialScroll && data?.pages.length) {
@@ -187,6 +186,7 @@ export function MessagesList() {
             key={messag.id}
             message={messag}
             imageLoadingCoordinator={imageLoadingCoordinator}
+            currentUserId={user.id}
           />
         ))}
         <div ref={bottomRef} className="h-1" />

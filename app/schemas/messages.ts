@@ -6,4 +6,11 @@ export const messageSchema = z.object({
   imageUrl: z.url().optional(),
 });
 
+export const updateMessageSchema = z.object({
+  messageId: z.string(),
+  content: z.string().optional(),
+});
+
 export type MessageSchemaType = z.infer<typeof messageSchema>;
+
+export type UpdateMessageSchemaType = z.infer<typeof updateMessageSchema>;

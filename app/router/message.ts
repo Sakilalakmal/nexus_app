@@ -5,11 +5,10 @@ import { requiredAuthMiddleware } from "../middlewares/auth";
 import { base } from "../middlewares/base";
 import { requiredWorkspaceMiddleware } from "../middlewares/workspace";
 import prisma from "@/lib/prismaClient";
-import { messageSchema } from "../schemas/messages";
+import { messageSchema, updateMessageSchema } from "../schemas/messages";
 import { getAvatar } from "@/lib/getAwatar";
 import { Message } from "@/lib/generated/prisma/client";
 import { readSecurityMiddleware } from "../middlewares/read";
-import next from "next";
 
 export const createMessage = base
   .use(requiredAuthMiddleware)
@@ -112,5 +111,65 @@ export const listMessages = base
     return {
       items: messages,
       nextCursor: nextCursor,
+    };
+  });
+
+export const updateMessage = base
+  .use(requiredAuthMiddleware)
+  .use(requiredWorkspaceMiddleware)
+  .use(standardSecurityMiddleware)
+  .use(writeSecurityMiddleware)
+  .route({
+    method: "PUT",
+    path: "/messages",
+    summary: "Update a message",
+    description: "Update the content or image of an existing message.",
+    tags: ["Messages"],
+  })
+  .input(updateMessageSchema)
+  .output(
+    z.object({
+      message: z.custom<Message>(),
+      canEdit: z.boolean(),
+    })
+  )
+  .handler(async ({ context, input, errors }) => {
+    const message = await prisma.message.findFirst({
+      where: {
+        id: input.messageId,
+        Channel: {
+          workspaceId: context.workspace.orgCode,
+        },
+      },
+      select: {
+        id: true,
+        authorId: true,
+      },
+    });
+
+    if (!message) {
+      throw errors.NOT_FOUND();
+    }
+
+    if (message.authorId !== context.user.id) {
+      throw errors.FORBIDDEN({
+        message: "You are not authorized to update this message.",
+      });
+    }
+
+    //update message
+
+    const updatedMessage = await prisma.message.update({
+      where: {
+        id: input.messageId,
+      },
+      data: {
+        content: input.content,
+      },
+    });
+
+    return {
+      message: updatedMessage,
+      canEdit: updatedMessage.authorId === context.user.id,
     };
   });
