@@ -98,8 +98,12 @@ export function EditMessage({ message, onCancel, onSave }: editMessageProps) {
                       >
                         Cancel
                       </Button>
-                      <Button type="submit" size={"sm"}>
-                        Save
+                      <Button
+                        type="submit"
+                        size={"sm"}
+                        disabled={updateMutation.isPending}
+                      >
+                        {updateMutation.isPending ? "Saving..." : "Save"}
                       </Button>
                     </div>
                   }
