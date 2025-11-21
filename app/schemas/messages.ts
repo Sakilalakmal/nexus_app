@@ -12,6 +12,21 @@ export const updateMessageSchema = z.object({
   content: z.string().optional(),
 });
 
+export const toggleReactionSchema = z.object({
+  messageId: z.string(),
+  emoji: z.string().min(1),
+});
+
+export const groupedReactionsSchema = z.object({
+  emoji: z.string(),
+  count: z.number(),
+  reactedByUser: z.boolean(),
+});
+
 export type MessageSchemaType = z.infer<typeof messageSchema>;
 
 export type UpdateMessageSchemaType = z.infer<typeof updateMessageSchema>;
+
+export type ToggleReactionSchemaType = z.infer<typeof toggleReactionSchema>;
+
+export type GroupedReactionsSchemaType = z.infer<typeof groupedReactionsSchema>;
