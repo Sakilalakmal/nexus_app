@@ -12,6 +12,8 @@ import { heavyWriteSecurityMiddleware } from "../middlewares/arcjet/heavy-weight
 import { readSecurityMiddleware } from "../middlewares/read";
 import prisma from "@/lib/prismaClient";
 import { Message } from "@prisma/client";
+import { MessageListItem } from "@/lib/type";
+import { groupFunctions } from "./message";
 
 export const listWorkspaces = base
   .use(requiredAuthMiddleware)
@@ -137,8 +139,8 @@ export const listReplies = base
   .input(z.object({ messageId: z.string() }))
   .output(
     z.object({
-      parent: z.custom<Message>(),
-      messages: z.array(z.custom<Message>()),
+      parent: z.custom<MessageListItem>(),
+      messages: z.array(z.custom<MessageListItem>()),
     })
   )
   .handler(async ({ context, input, errors }) => {
@@ -149,26 +151,88 @@ export const listReplies = base
           workspaceId: context.workspace.orgCode,
         },
       },
+      include: {
+        _count: {
+          select: {
+            replies: true,
+          },
+        },
+        messageReactions: {
+          select: {
+            emoji: true,
+            userId: true,
+          },
+        },
+      },
     });
 
     if (!parentRow) {
       throw errors.NOT_FOUND();
     }
 
-    //fetching all replies
-    const replies = await prisma.message.findMany({
+    //fetching all messages with replies
+    const messagesWithReplies = await prisma.message.findMany({
       where: {
         threadId: input.messageId,
+      },
+      include: {
+        _count: {
+          select: {
+            replies: true,
+          },
+        },
+        messageReactions: {
+          select: {
+            emoji: true,
+            userId: true,
+          },
+        },
       },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
 
-    const parent = {
-      ...parentRow,
+    const parent: MessageListItem = {
+      id: parentRow.id,
+      content: parentRow.content,
+      imageUrl: parentRow.imageUrl,
+      authorAvatar: parentRow.authorAvatar,
+      authorEmail: parentRow.authorEmail,
+      authorId: parentRow.authorId,
+      authorName: parentRow.authorName,
+      createdAt: parentRow.createdAt,
+      updatedAt: parentRow.updatedAt,
+      channelId: parentRow.channelId,
+      threadId: parentRow.threadId,
+      repliesCount: parentRow._count.replies,
+      reactions: groupFunctions(
+        context.user.id,
+        parentRow.messageReactions.map((r) => ({
+          emoji: r.emoji,
+          userId: r.userId,
+        }))
+      ),
     };
 
-    const messages = replies.map((reply) => ({
-      ...reply,
+    const messages: MessageListItem[] = messagesWithReplies.map((m) => ({
+      id: m.id,
+      content: m.content,
+      imageUrl: m.imageUrl,
+      authorAvatar: m.authorAvatar,
+      authorEmail: m.authorEmail,
+      authorId: m.authorId,
+      authorName: m.authorName,
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+      channelId: m.channelId,
+      threadId: m.threadId,
+      repliesCount: m._count.replies,
+      reactions: groupFunctions(
+        context.user.id,
+        m.messageReactions.map((r) => ({
+          emoji: r.emoji,
+          userId: r.userId,
+        }))
+      ),
     }));
 
     return {

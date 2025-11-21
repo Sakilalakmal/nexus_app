@@ -10,6 +10,7 @@ import { MessageSquare } from "lucide-react";
 import { useThreadContext } from "@/providers/threadProvders";
 import { orpc } from "@/lib/orpc";
 import { useQueryClient } from "@tanstack/react-query";
+import { ReactionBar } from "../reactions/Reaction-bar";
 
 interface messagesProps {
   message: MessageListItem;
@@ -134,6 +135,14 @@ export function MessageItem({
                 )}
               </div>
             )}
+
+            {/* emoji reactions */}
+            <ReactionBar
+              messageId={message.id}
+              reactions={message.reactions}
+              context={{ type: "list", channelId: message.channelId }}
+            />
+
             {message.repliesCount > 0 && (
               <button
                 onMouseEnter={prefetchThread}
