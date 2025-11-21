@@ -9,6 +9,9 @@ import { workspaceSchema } from "../schemas/workspace";
 import { Organizations, Users, init } from "@kinde/management-api-js";
 import { standardSecurityMiddleware } from "../middlewares/arcjet/standard";
 import { heavyWriteSecurityMiddleware } from "../middlewares/arcjet/heavy-weight";
+import { readSecurityMiddleware } from "../middlewares/read";
+import prisma from "@/lib/prismaClient";
+import { Message } from "@prisma/client";
 
 export const listWorkspaces = base
   .use(requiredAuthMiddleware)
@@ -115,5 +118,61 @@ export const createWorkspaces = base
     return {
       orgCode: data.organization.code,
       workspaceName: input.name,
+    };
+  });
+
+export const listReplies = base
+  .use(requiredAuthMiddleware)
+  .use(requiredWorkspaceMiddleware)
+  .use(standardSecurityMiddleware)
+  .use(readSecurityMiddleware)
+  .route({
+    method: "GET",
+    path: "/messages/:messageId/thread",
+    summary: "List Replies in a Thread",
+    description:
+      "Retrieves a paginated list of replies for a specific thread within a channel. Requires authentication and workspace context.",
+    tags: ["Message"],
+  })
+  .input(z.object({ messageId: z.string() }))
+  .output(
+    z.object({
+      parent: z.custom<Message>(),
+      messages: z.array(z.custom<Message>()),
+    })
+  )
+  .handler(async ({ context, input, errors }) => {
+    const parentRow = await prisma.message.findFirst({
+      where: {
+        id: input.messageId,
+        Channel: {
+          workspaceId: context.workspace.orgCode,
+        },
+      },
+    });
+
+    if (!parentRow) {
+      throw errors.NOT_FOUND();
+    }
+
+    //fetching all replies
+    const replies = await prisma.message.findMany({
+      where: {
+        threadId: input.messageId,
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+
+    const parent = {
+      ...parentRow,
+    };
+
+    const messages = replies.map((reply) => ({
+      ...reply,
+    }));
+
+    return {
+      parent,
+      messages,
     };
   });

@@ -5,8 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../lib/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -45,4 +44,10 @@ model Message {
 
   Channel   Channel @relation(fields: [channelId], references: [id])
   channelId String
+
+  //threat relations
+  parentMessage Message? @relation("MessageThread", fields: [threadId], references: [id] , onDelete: Cascade)
+  threadId String?
+
+  replies Message[] @relation("MessageThread")
 }

@@ -1,14 +1,18 @@
 import { SafeContent } from "@/components/rich-text-editor/SafeContent";
-import { Message } from "@/lib/generated/prisma/client";
 import { getAvatar } from "@/lib/getAwatar";
 import { ImageLoadingCoordinatorType } from "@/hooks/use-image-loading-coordinator";
 import Image from "next/image";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { MesssgeHoverToolBar } from "../ToolBar/Index";
 import { EditMessage } from "../ToolBar/EditMessage";
+import { MessageListItem } from "@/lib/type";
+import { MessageSquare } from "lucide-react";
+import { useThreadContext } from "@/providers/threadProvders";
+import { orpc } from "@/lib/orpc";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface messagesProps {
-  message: Message;
+  message: MessageListItem;
   imageLoadingCoordinator?: ImageLoadingCoordinatorType;
   currentUserId: string;
 }
@@ -21,6 +25,24 @@ export function MessageItem({
   const [imageLoading, setImageLoading] = useState(!!message.imageUrl);
   const [imageError, setImageError] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { openThread } = useThreadContext();
+
+  const prefetchThread = useCallback(() => {
+    const options = orpc.message.thread.list.queryOptions({
+      input: {
+        messageId: message.id,
+      },
+    });
+
+    queryClient
+      .prefetchQuery({
+        ...options,
+        staleTime: 60_000,
+      })
+      .catch(() => {});
+  }, [message.id, queryClient]);
 
   const handleImageLoadStart = () => {
     if (message.imageUrl) {
@@ -111,6 +133,24 @@ export function MessageItem({
                   />
                 )}
               </div>
+            )}
+            {message.repliesCount > 0 && (
+              <button
+                onMouseEnter={prefetchThread}
+                onFocus={prefetchThread}
+                onClick={() => openThread?.(message.id)}
+                type="button"
+                className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:cursor-pointer hover:text-primary"
+              >
+                <MessageSquare className="size-3.5" />
+                <span>
+                  {message.repliesCount}
+                  {message.repliesCount === 1 ? " reply" : " replies"}
+                </span>
+                <span className="opacity-0 group-hover:opacity-100">
+                  View Thread
+                </span>
+              </button>
             )}
           </>
         )}

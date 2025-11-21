@@ -6,6 +6,7 @@ import { orpc } from "@/lib/orpc";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useImageLoadingCoordinator } from "@/hooks/use-image-loading-coordinator";
+import { MessageListSkeleton } from "./threads/ThreadSideBarSkeleton";
 
 export function MessagesList() {
   const { channelId } = useParams<{ channelId: string }>();
@@ -39,11 +40,12 @@ export function MessagesList() {
     }),
   });
 
-  const { data, fetchNextPage, hasNextPage, isFetching } = useInfiniteQuery({
-    ...infiniteOptions,
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
-  });
+  const { data, fetchNextPage, hasNextPage, isFetching, isLoading } =
+    useInfiniteQuery({
+      ...infiniteOptions,
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    });
 
   const {
     data: { user },
@@ -173,6 +175,17 @@ export function MessagesList() {
   const items = useMemo(() => {
     return data?.pages.flatMap((page) => page.items) || [];
   }, [data]);
+
+  // Show skeleton while loading initial data
+  if (isLoading) {
+    return (
+      <div className="relative h-full">
+        <div className="h-full overflow-y-auto">
+          <MessageListSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-full">

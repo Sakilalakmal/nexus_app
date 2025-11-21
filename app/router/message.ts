@@ -7,8 +7,9 @@ import { requiredWorkspaceMiddleware } from "../middlewares/workspace";
 import prisma from "@/lib/prismaClient";
 import { messageSchema, updateMessageSchema } from "../schemas/messages";
 import { getAvatar } from "@/lib/getAwatar";
-import { Message } from "@/lib/generated/prisma/client";
+import { Message } from "@prisma/client";
 import { readSecurityMiddleware } from "../middlewares/read";
+import { MessageListItem } from "../../lib/type";
 
 export const createMessage = base
   .use(requiredAuthMiddleware)
@@ -30,7 +31,7 @@ export const createMessage = base
 
     const channel = await prisma.channel.findFirst({
       where: {
-        id: input.chanellId,
+        id: input.channelId,
         workspaceId: context.workspace.orgCode,
       },
     });
@@ -39,15 +40,35 @@ export const createMessage = base
       throw errors.FORBIDDEN();
     }
 
+    if (input.threadId) {
+      const parentMessage = await prisma.message.findFirst({
+        where: {
+          id: input.threadId,
+          Channel: {
+            workspaceId: context.workspace.orgCode,
+          },
+        },
+      });
+
+      if (
+        !parentMessage ||
+        parentMessage.channelId !== input.channelId ||
+        parentMessage.threadId !== null
+      ) {
+        throw errors.BAD_REQUEST();
+      }
+    }
+
     const createMessage = await prisma.message.create({
       data: {
         content: input.content,
         imageUrl: input.imageUrl,
-        channelId: input.chanellId,
+        channelId: input.channelId,
         authorId: context.user.id,
         authorEmail: context.user.email!,
         authorName: context.user.given_name ?? "",
         authorAvatar: getAvatar(context.user.picture, context.user.email!),
+        threadId: input.threadId,
       },
     });
 
@@ -78,7 +99,7 @@ export const listMessages = base
   )
   .output(
     z.object({
-      items: z.custom<Message[]>(),
+      items: z.array(z.custom<MessageListItem>()),
       nextCursor: z.string().optional(),
     })
   )
@@ -99,17 +120,38 @@ export const listMessages = base
     const messages = await prisma.message.findMany({
       where: {
         channelId: input.channelId,
+        threadId: null,
       },
       ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
       take: limit,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      include: {
+        _count: {
+          select: { replies: true },
+        },
+      },
     });
+
+    const items: MessageListItem[] = messages.map((m) => ({
+      id: m.id,
+      content: m.content,
+      imageUrl: m.imageUrl,
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+      authorAvatar: m.authorAvatar,
+      authorEmail: m.authorEmail,
+      authorId: m.authorId,
+      authorName: m.authorName,
+      channelId: m.channelId,
+      threadId: m.threadId,
+      repliesCount: m._count.replies,
+    }));
 
     const nextCursor =
       messages.length === limit ? messages[messages.length - 1].id : undefined;
 
     return {
-      items: messages,
+      items,
       nextCursor: nextCursor,
     };
   });

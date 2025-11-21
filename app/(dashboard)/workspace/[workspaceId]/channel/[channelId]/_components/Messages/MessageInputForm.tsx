@@ -22,7 +22,7 @@ import { orpc } from "@/lib/orpc";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useAttachmentUpload } from "@/hooks/Use-attachment-upload";
-import { Message } from "@/lib/generated/prisma/client";
+import { Message } from "@prisma/client";
 import { KindeUser } from "@kinde-oss/kinde-auth-nextjs";
 import { getAvatar } from "@/lib/getAwatar";
 import { da } from "zod/v4/locales";
@@ -47,7 +47,8 @@ export function MessageInputForm({ channelId, user }: messageProps) {
     resolver: zodResolver(messageSchema),
     defaultValues: {
       content: "",
-      chanellId: channelId,
+      channelId: channelId,
+      threadId: undefined,
     },
   });
 
@@ -76,6 +77,7 @@ export function MessageInputForm({ channelId, user }: messageProps) {
           authorName: user.given_name as string,
           authorAvatar: getAvatar(user.picture as string | null, user.email!),
           channelId: channelId,
+          threadId: null,
         };
 
         queryClient.setQueryData<inifiniteMessages>(
@@ -136,7 +138,7 @@ export function MessageInputForm({ channelId, user }: messageProps) {
           }
         );
 
-        form.reset({ chanellId: channelId, content: "" });
+        form.reset({ channelId: channelId, content: "", threadId: undefined });
         setEditorKey((prev) => prev + 1);
         return toast.success("Message sent");
       },

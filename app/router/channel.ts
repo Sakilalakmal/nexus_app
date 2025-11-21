@@ -13,7 +13,7 @@ import {
   Organizations,
 } from "@kinde/management-api-js";
 import { KindeOrganization, KindeUser } from "@kinde-oss/kinde-auth-nextjs";
-import { Channel } from "@/lib/generated/prisma/client";
+import { Channel } from "@prisma/client";
 import { readSecurityMiddleware } from "../middlewares/read";
 
 export const createChannel = base

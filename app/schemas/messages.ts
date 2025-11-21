@@ -1,9 +1,10 @@
 import z from "zod";
 
 export const messageSchema = z.object({
-  chanellId: z.string(),
+  channelId: z.string(),
   content: z.string(),
   imageUrl: z.url().optional(),
+  threadId: z.string().optional(),
 });
 
 export const updateMessageSchema = z.object({
