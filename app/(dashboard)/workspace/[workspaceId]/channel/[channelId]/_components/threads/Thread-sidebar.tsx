@@ -12,6 +12,7 @@ import { KindeUser } from "@kinde-oss/kinde-auth-nextjs";
 import { ThreadSideBarSkeleton } from "./ThreadSideBarSkeleton";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useImageLoadingCoordinator } from "@/hooks/use-image-loading-coordinator";
+import { SummarizeThread } from "./SummarizeThread";
 
 interface ThreadSidebarProps {
   user: KindeUser<Record<string, unknown>>;
@@ -158,6 +159,8 @@ export function ThreadSideBar({ user }: ThreadSidebarProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <SummarizeThread messageId={selectedThreadId!} />
+
           <Button variant={"outline"} size={"icon"} onClick={closeThread}>
             <X className="size-4" />
           </Button>
