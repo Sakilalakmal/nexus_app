@@ -8,6 +8,7 @@ import { streamText } from "ai";
 
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { streamToEventIterator } from "@orpc/server";
+import { aiSecurityMiddleware } from "../middlewares/arcjet/ai";
 
 const openrouter = createOpenRouter({
   apiKey: process.env.LLM_KEY!,
@@ -20,6 +21,7 @@ const model = openrouter.chat(MODEL_ID);
 export const generateThreadSummary = base
   .use(requiredAuthMiddleware)
   .use(requiredWorkspaceMiddleware)
+  .use(aiSecurityMiddleware)
   .route({
     method: "GET",
     path: "/ai/threads/summary",
@@ -121,6 +123,58 @@ export const generateThreadSummary = base
       system,
       messages: [{ role: "user", content: compiled }],
       temperature: 0.2,
+    });
+
+    return streamToEventIterator(result.toUIMessageStream());
+  });
+
+//! main ai generate compose procedgure
+
+export const generateCompose = base
+  .use(requiredAuthMiddleware)
+  .use(requiredWorkspaceMiddleware)
+  .use(aiSecurityMiddleware)
+  .route({
+    method: "POST",
+    path: "/ai/",
+    summary: "Generate message compose using AI",
+    description: "Generate message compose using AI",
+    tags: ["AI"],
+  })
+  .input(
+    z.object({
+      content: z.string(),
+    })
+  )
+  .handler(async ({ input, context, errors }) => {
+    const markdown = await jsonToMarkdown(input.content);
+
+    const system = [
+      "you are an expert assistant tasked with composing professional and concise messages for users. When generating a message, focus on clarity, brevity, and professionalism.",
+      "Task: rewrite the provided content into a well-structured message that effectively communicates the intended information.",
+      "Your composed message must:",
+      "Be clear, concise, and free of ambiguity.",
+      "Maintain a professional tone suitable for workplace communication.",
+      "Organize information logically, using paragraphs or bullet points as needed.",
+      "Avoid unnecessary jargon, slang, or informal language.",
+      "Ensure proper grammar, punctuation, and spelling throughout the message.",
+      "return only rewritten message without any additional commentary or explanation.",
+    ].join(" \n");
+
+    const result = streamText({
+      model,
+      system,
+      messages: [
+        {
+          role: "user",
+          content: `Compose a professional and concise message based on the following content`,
+        },
+        {
+          role: "user",
+          content: markdown,
+        },
+      ],
+      temperature: 0,
     });
 
     return streamToEventIterator(result.toUIMessageStream());

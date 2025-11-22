@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
+import { ComposeAssistant } from "./Compose-assistant";
+import { markdownToJson } from "@/lib/markdown-to-json";
 
 interface menuBarProps {
   editor: Editor | null;
@@ -38,6 +40,7 @@ export function MenuBar({ editor }: menuBarProps) {
         isOrderedList: editor.isActive("orderedList"),
         canUndo: editor.can().undo(),
         canRedo: editor.can().redo(),
+        currentContent: editor.getJSON(),
       };
     },
   });
@@ -45,6 +48,15 @@ export function MenuBar({ editor }: menuBarProps) {
   if (!editor) {
     return null;
   }
+
+  const handleAcceptCompose = (markdown: string) => {
+    try {
+      const json = markdownToJson(markdown);
+      editor.commands.setContent(json);
+    } catch (error) {
+      console.log("Failed to convert markdown to JSON:", error);
+    }
+  };
 
   return (
     <div className="border border-input border-t-0 border-x-0 rounded-t-lg p-2 bg-card flex flex-wrap gap-1 items-center">
@@ -196,6 +208,14 @@ export function MenuBar({ editor }: menuBarProps) {
             </TooltipTrigger>
             <TooltipContent>Redo</TooltipContent>
           </Tooltip>
+        </div>
+
+        <div className="w-px h-6 bg-border mx-2"></div>
+        <div className="flex flex-wrap gap-1">
+          <ComposeAssistant
+            onAccept={handleAcceptCompose}
+            content={JSON.stringify(editorSatate?.currentContent)}
+          />
         </div>
       </TooltipProvider>
     </div>
