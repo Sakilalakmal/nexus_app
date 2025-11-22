@@ -6,11 +6,13 @@ import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { eventIteratorToStream } from "@orpc/server";
 import { client } from "@/lib/orpc";
+
 interface ComposeAssistantProps {
   content: string;
+  onAccept?: (markdown: string) => void;
 }
 
-export function ComposeAssistant({ content }: ComposeAssistantProps) {
+export function ComposeAssistant({ content, onAccept }: ComposeAssistantProps) {
   const [open, setOpen] = useState(false);
   const contentRef = useRef(content);
 
@@ -151,7 +153,21 @@ export function ComposeAssistant({ content }: ComposeAssistantProps) {
           >
             Decline...
           </Button>
-          <Button type="submit" size={"sm"}>
+          <Button
+            type="submit"
+            size={"sm"}
+            onClick={() => {
+              if (!summaryText) return;
+
+              onAccept?.(summaryText);
+
+              stop();
+              clearError();
+              setMessages([]);
+              setOpen(false);
+            }}
+            disabled={!summaryText}
+          >
             Accept
           </Button>
         </div>

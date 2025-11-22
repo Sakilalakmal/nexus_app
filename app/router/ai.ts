@@ -8,6 +8,7 @@ import { streamText } from "ai";
 
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { streamToEventIterator } from "@orpc/server";
+import { aiSecurityMiddleware } from "../middlewares/arcjet/ai";
 
 const openrouter = createOpenRouter({
   apiKey: process.env.LLM_KEY!,
@@ -20,6 +21,7 @@ const model = openrouter.chat(MODEL_ID);
 export const generateThreadSummary = base
   .use(requiredAuthMiddleware)
   .use(requiredWorkspaceMiddleware)
+  .use(aiSecurityMiddleware)
   .route({
     method: "GET",
     path: "/ai/threads/summary",
@@ -131,6 +133,7 @@ export const generateThreadSummary = base
 export const generateCompose = base
   .use(requiredAuthMiddleware)
   .use(requiredWorkspaceMiddleware)
+  .use(aiSecurityMiddleware)
   .route({
     method: "POST",
     path: "/ai/",
