@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
+import { ComposeAssistant } from "./Compose-assistant";
 
 interface menuBarProps {
   editor: Editor | null;
@@ -38,6 +39,7 @@ export function MenuBar({ editor }: menuBarProps) {
         isOrderedList: editor.isActive("orderedList"),
         canUndo: editor.can().undo(),
         canRedo: editor.can().redo(),
+        currentContent: editor.getJSON(),
       };
     },
   });
@@ -196,6 +198,13 @@ export function MenuBar({ editor }: menuBarProps) {
             </TooltipTrigger>
             <TooltipContent>Redo</TooltipContent>
           </Tooltip>
+        </div>
+
+        <div className="w-px h-6 bg-border mx-2"></div>
+        <div className="flex flex-wrap gap-1">
+          <ComposeAssistant
+            content={JSON.stringify(editorSatate?.currentContent)}
+          />
         </div>
       </TooltipProvider>
     </div>
